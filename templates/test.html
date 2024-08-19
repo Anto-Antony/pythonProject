@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Current Month Calendar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        #calendar {
+            width: 300px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #calendar table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #calendar th, #calendar td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        #calendar th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        #calendar td {
+            border: 1px solid #ddd;
+        }
+
+        #calendar .today {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="calendar"></div>
+
+    <script>
+        window.onload = function() {
+            const date = new Date();
+            const month = date.getMonth();
+            const year = date.getFullYear();
+
+            const calendar = document.getElementById("calendar");
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const firstDay = new Date(year, month, 1).getDay();
+
+            let table = "<table><tr>";
+            const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+            for (let day of daysOfWeek) {
+                table += `<th>${day}</th>`;
+            }
+            table += "</tr><tr>";
+
+            for (let i = 0; i < firstDay; i++) {
+                table += "<td></td>";
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                if ((day + firstDay - 1) % 7 === 0) {
+                    table += "</tr><tr>";
+                }
+                const today = new Date().getDate();
+                if (day === today) {
+                    table += `<td class="today">${day}</td>`;
+                } else {
+                    table += `<td>${day}</td>`;
+                }
+            }
+
+            table += "</tr></table>";
+            calendar.innerHTML = table;
+        };
+    </script>
+</body>
+</html>

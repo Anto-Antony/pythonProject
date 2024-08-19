@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Task</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    {% include 'header.html' %}
+    <div class="form-container">
+        <h2>Create Task</h2>
+        <form method="POST" action="{{ url_for('create_task') }}">
+            <label for="task_name">Task Name</label>
+            <input type="text" id="task_name" name="task_name" required>
+            <label for="due_date">Due Date</label>
+            <input type="date" id="due_date" name="due_date" required>
+            <label for="due_time">Due Time</label>
+            <input type="time" id="due_time" name="due_time" required>
+            <label for="priority">Priority</label>
+            <select id="priority" name="priority">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+            </select>
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="4" required></textarea>
+            <button type="submit">Create Task</button>
+        </form>
+    </div>
+</body>
+</html>

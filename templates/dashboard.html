@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.10.2/main.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard_styles.css') }}">
+</head>
+<body>
+
+    {% include 'header.html' %}
+
+    <div class="container">
+   <div class="tasks-container" id="tasks-container">
+    <h2>Tasks</h2>
+    <ul id="tasks-list">
+        <!-- Task items will be appended here -->
+    </ul>
+   </div></div>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let currentDate = new Date();
+function loadTasks(date, direction) {
+    $.ajax({
+        url: "/dashboard",
+        method: "GET",
+        data: { date: date.toISOString().split('T')[0], direction: direction },
+        success: function(data) {
+            // Check if the response contains 'tasks'
+            if (data.tasks && data.tasks.length > 0) {
+                let tasksList = $('#tasks-list');
+                tasksList.empty();  // Clear previous tasks
+
+                data.tasks.forEach(task => {
+                    let taskItem = `<li>
+                                        ${task.task_name} - ${task.due_time}
+                                        <span class="task-icon ${task.priority.toLowerCase()}"></span>
+                                        <div class="task-details">
+                                            ${task.description}
+                                        </div>
+                                    </li>`;
+                    tasksList.append(taskItem);
+                });
+            } else {
+                $('#tasks-list').html('<li>No tasks for this day.</li>');
+            }
+        },
+        error: function(error) {
+            console.error("Error fetching tasks: ", error);
+            $('#tasks-list').html('<li>Error loading tasks.</li>');
+        }
+    });
+}
+
+        $('#tasks-container').on('scroll', function() {
+            let scrollTop = $(this).scrollTop();
+            let scrollHeight = $(this).prop('scrollHeight');
+            let clientHeight = $(this).height();
+
+            if (scrollTop + clientHeight >= scrollHeight) {
+                currentDate.setDate(currentDate.getDate() + 1); // Next day
+                loadTasks(currentDate, 'down');
+            } else if (scrollTop === 0) {
+                currentDate.setDate(currentDate.getDate() - 1); // Previous day
+                loadTasks(currentDate, 'up');
+            }
+        });
+
+        // Load today's tasks on page load
+        loadTasks(currentDate, 'today');
+    </script>
+</body>
+</html>

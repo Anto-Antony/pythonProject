@@ -1,0 +1,78 @@
+
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard_styles.css') }}">
+    <header>
+        <h1>Welcome to Your Dashboard</h1>
+        <div class="menu-button" onclick="toggleMenu()">☰ Menu</div>
+    </header>
+    <div class="sidebar-container" id="sidebar">
+        <div class="menu">
+            <div class="calendar-container">
+                <h2>High Priority Tasks Calendar</h2>
+                <div id="calendar"></div>
+            </div>
+
+                <a href="{{ url_for('dashboard') }}">dash</a>
+                <a href="{{ url_for('create_task') }}">Create Task</a>
+                <a href="{{ url_for('manage_tasks') }}">Manage Tasks</a>
+             {% if logged_in %}
+                <a href="{{ url_for('logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+            {% endif %}
+        </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.10.2/main.min.js"></script>
+    <script>
+        function toggleMenu() {
+            var sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('active');
+        }
+        window.onload = function() {
+        const date = new Date();
+        const month = date.getMonth();
+        const year = date.getFullYear();
+
+        const calendar = document.getElementById("calendar");
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+
+        // High-priority task dates from the backend
+        const highPriorityDates = {{ tasks | tojson | safe }};
+
+        let table = "<table><tr>";
+        const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        for (let day of daysOfWeek) {
+            table += `<th>${day}</th>`;
+        }
+        table += "</tr><tr>";
+
+        for (let i = 0; i < firstDay; i++) {
+            table += "<td></td>";
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            if ((day + firstDay - 1) % 7 === 0) {
+                table += "</tr><tr>";
+            }
+            const today = new Date().getDate();
+            const taskDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            if (day === today) {
+                table += `<td class="today">${day}</td>`;
+            } else if (highPriorityDates.includes(taskDate)) {
+                table += `<td class="high-priority">${day}</td>`;
+            } else {
+                table += `<td>${day}</td>`;
+            }
+        }
+
+        table += "</tr></table>";
+        calendar.innerHTML = table;
+    };
+
+    </script>
+

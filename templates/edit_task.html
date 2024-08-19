@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Task</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    {% include 'header.html' %}
+    <div class="edit-task-container">
+        <h2>Edit Task</h2>
+        <form method="POST" action="{{ url_for('edit_task', task_id=task.id) }}">
+            <label for="task_name">Task Name</label>
+            <input type="text" id="task_name" name="task_name" value="{{ task.task_name }}" required>
+            <label for="due_date">Due Date</label>
+            <input type="date" id="due_date" name="due_date" value="{{ task.due_date }}" required>
+            <label for="due_time">Due Time</label>
+            <input type="time" id="due_time" name="due_time" value="{{ task.due_time }}" required>
+            <label for="priority">Priority</label>
+            <select id="priority" name="priority">
+                <option value="Low" {% if task.priority == 'Low' %}selected{% endif %}>Low</option>
+                <option value="Medium" {% if task.priority == 'Medium' %}selected{% endif %}>Medium</option>
+                <option value="High" {% if task.priority == 'High' %}selected{% endif %}>High</option>
+            </select>
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="4" required>{{ task.description }}</textarea>
+            <button type="submit">Update Task</button>
+        </form>
+    </div>
+</body>
+</html>
