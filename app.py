@@ -3,12 +3,12 @@ import os
 import mysql
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from db_config import get_db_connection
-# from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
+app.secret_key = os.getenv('SECRET_KEY', 'secrets.token_hex(16)')
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -23,9 +23,8 @@ def login():
         user = cursor.fetchone()
         conn.close()
 
-        # flash(f'User from DB: {user}')
-        # if user and check_password_hash(user['password'], password):
-        if user:
+        flash(f'User from DB: {user}')
+        if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
@@ -47,12 +46,12 @@ def register():
             flash('Passwords do not match.', 'danger')
             return redirect(url_for('register'))
 
-        # hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)
 
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('INSERT INTO users (email, phone, profession, password) VALUES (%s, %s, %s, %s)',
-                       (email, phone, profession, password))
+                       (email, phone, profession, hashed_password))
         conn.commit()
         conn.close()
 
