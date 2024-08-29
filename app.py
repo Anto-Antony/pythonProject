@@ -24,10 +24,13 @@ def login():
         conn.close()
 
         flash(f'User from DB: {user}')
-        if user and check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
+        if user:
+            if check_password_hash(user['password'], password):
+                session['user_id'] = user['id']
+                flash('Login successful!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Invalid Password','danger')
         else:
             flash('Invalid credentials, please try again.', 'danger')
     return render_template('login.html', logged_in=False, tasks=None, todays_tasks=None)
