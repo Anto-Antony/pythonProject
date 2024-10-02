@@ -4,29 +4,307 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Task</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .task-item {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .horizontal-fields {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .icons {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-start;
+            margin-top: 10px;
+        }
+
+        .icons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+
+        .hidden-fields {
+            display: none;
+        }
+
+        .hidden-fields.active {
+            display: block;
+        }
+
+        .delete-task {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 25px;
+            height: 25px;
+            font-size: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button.submit-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button.submit-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
     {% include 'header.html' %}
     <div class="form-container">
         <h2>Create Task</h2>
+
+        <!-- Text area for generating tasks from input text -->
+        <div class="form-group">
+            <label for="task_input_text">Task Description Input</label>
+            <textarea id="task_input_text" rows="4" class="form-control" placeholder="Enter your task details here..."></textarea>
+            <button type="button" id="generate-task-btn" class="btn btn-success mt-2">Generate Task</button>
+        </div>
+
         <form method="POST" action="{{ url_for('create_task') }}">
-            <label for="task_name">Task Name</label>
-            <input type="text" id="task_name" name="task_name" required>
-            <label for="due_date">Due Date</label>
-            <input type="date" id="due_date" name="due_date" required>
-            <label for="due_time">Due Time</label>
-            <input type="time" id="due_time" name="due_time" required>
-            <label for="priority">Priority</label>
-            <select id="priority" name="priority">
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-            </select>
-            <label for="description">Description</label>
-            <textarea id="description" name="description" rows="4" required></textarea>
-            <button type="submit">Create Task</button>
+            <div id="task-list">
+                <div class="task-item">
+                    <button type="button" class="delete-task">&times;</button>
+
+                    <div class="horizontal-fields">
+                        <div class="form-group">
+                            <label for="task_name">Task Name</label>
+                            <input type="text" id="task_name" name="task_name[]" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <textarea id="description" name="description[]" rows="4" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="icons">
+                        <button type="button" onclick="toggleField(this, 'due_date_field')" aria-label="Due Date">
+                            <i class="bi bi-calendar3"></i>
+                        </button>
+
+                        <button type="button" onclick="toggleField(this, 'priority_field')" aria-label="Priority">
+                            <i class="bi bi-flag-fill"></i>
+                        </button>
+
+                        <button type="button" onclick="toggleField(this, 'recurring_field')" aria-label="Recurring Task">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </button>
+
+                        <button type="button" onclick="toggleField(this, 'time_field')" aria-label="Task Time">
+                            <i class="bi bi-clock"></i>
+                        </button>
+                    </div>
+
+                    <div class="hidden-fields due_date_field">
+                        <label for="due_date">Due Date</label>
+                        <input type="date" id="due_date" name="due_date[]">
+                    </div>
+
+                    <div class="hidden-fields priority_field">
+                        <label for="priority">Priority</label>
+                        <select id="priority" name="priority[]">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                    <div class="hidden-fields time_field">
+                        <label for="due_time">Due Time</label>
+                        <input type="time" id="due_time" name="due_time[]">
+                    </div>
+
+                    <div class="hidden-fields recurring_field">
+                        <label for="recurring">Recurring Task</label>
+                        <input type="checkbox" id="recurring" name="recurring[]">
+
+                        <label for="recurring_type">Recurring Type</label>
+                        <select id="recurring_type" name="recurring_type[]">
+                            <option value="0">None</option>
+                            <option value="1">Daily</option>
+                            <option value="2">Weekly</option>
+                            <option value="3">Monthly</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="add-task-btn" class="btn btn-primary">Add Another Task</button>
+            <button type="submit" class="submit-btn">Create Task</button>
         </form>
     </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Add new task
+        document.getElementById('add-task-btn').addEventListener('click', function() {
+            const taskList = document.getElementById('task-list');
+            const newTask = document.querySelector('.task-item').cloneNode(true);
+            newTask.querySelectorAll('input, textarea, select').forEach(input => input.value = ''); // Clear input values
+            taskList.appendChild(newTask);
+        });
+
+        // Toggle field visibility
+        function toggleField(button, fieldClass) {
+            const field = button.closest('.task-item').querySelector('.' + fieldClass);
+            field.classList.toggle('active');
+        }
+
+        // Delete task
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-task')) {
+                const taskItem = e.target.closest('.task-item');
+                taskItem.remove();
+            }
+        });
+
+        // Split the input text into multiple tasks based on periods (.) or newlines (\n)
+function splitIntoTasks(text) {
+    return text.split(/[\.\n]+/).map(task => task.trim()).filter(task => task.length > 0);
+}
+// Function to detect entities like dates and times using Wit.ai API
+async function detectEntitiesWitAI(taskText) {
+    const response = await fetch(`https://api.wit.ai/message?v=20230523&q=${encodeURIComponent(taskText)}`, {
+        headers: {
+            'Authorization': 'Bearer 528204516830881'
+        }
+    });
+
+    const data = await response.json();
+    return data.entities; // The entities will contain wit/datetime for dates and times
+}
+
+// Function to parse the response and extract dates, times, and other details
+function parseEntities(entities) {
+    const taskDateTime = entities['wit$datetime'] ? entities['wit$datetime'][0].value : null;
+    return {
+        date: taskDateTime ? taskDateTime.split('T')[0] : null, // Extract the date part
+        time: taskDateTime ? taskDateTime.split('T')[1].split('.')[0] : null // Extract the time part
+    };
+}
+
+// Add a task item to the form dynamically, including task name, description, date, and time
+function addTaskToForm(taskName, taskDescription, taskDate = null, taskTime = null) {
+    const taskList = document.getElementById('task-list');
+
+    // Clone the first task item to create a new one
+    const newTaskItem = document.querySelector('.task-item').cloneNode(true);
+    newTaskItem.querySelectorAll('input, textarea').forEach(input => input.value = ''); // Clear input values
+
+    // Fill in the task name and description
+    newTaskItem.querySelector('#task_name').value = taskName;
+    newTaskItem.querySelector('#description').value = taskDescription;
+
+    // Fill in the date if provided
+    if (taskDate) {
+        newTaskItem.querySelector('#due_date').value = taskDate;
+    }
+
+    // Fill in the time if provided
+    if (taskTime) {
+        newTaskItem.querySelector('#due_time').value = taskTime;
+    }
+
+    // Append the new task item to the task list
+    taskList.appendChild(newTaskItem);
+}
+
+// Generate task details including date and time from Wit.ai
+async function generateTaskDetails(taskText) {
+    // Call Wit.ai to detect entities
+    const entities = await detectEntitiesWitAI(taskText);
+
+    // Extract the relevant date and time entities from Wit.ai's response
+    const { date, time } = parseEntities(entities);
+
+    // Generate a task name based on the task description
+    const stopwords = ['the', 'a', 'and', 'is', 'of', 'to', 'for', 'with', 'in', 'by', 'on'];
+    const words = taskText.split(" ").filter(word => !stopwords.includes(word.toLowerCase()));
+    const meaningfulWords = words.filter(word => word.length > 2);
+    const taskName = meaningfulWords.slice(0, 3).join(" "); // Limit to the first 3 meaningful words
+
+    return {
+        taskName: taskName.length > 0 ? taskName : "Untitled Task",
+        taskDescription: taskText,
+        taskDate: date, // Date from Wit.ai
+        taskTime: time // Time from Wit.ai
+    };
+}
+
+// Generate multiple tasks from input text
+document.getElementById('generate-task-btn').addEventListener('click', async function() {
+    const inputText = document.getElementById('task_input_text').value;
+
+    if (inputText.trim()) {
+        const tasks = splitIntoTasks(inputText); // Split into multiple tasks
+
+        // Clear existing tasks except the first one
+        document.querySelectorAll('.task-item:not(:first-child)').forEach(task => task.remove());
+
+        // Loop through each task and add it to the form
+        for (let taskText of tasks) {
+            const { taskName, taskDescription, taskDate, taskTime } = await generateTaskDetails(taskText);
+            addTaskToForm(taskName, taskDescription, taskDate, taskTime);
+        }
+    }
+});
+
+    </script>
 </body>
 </html>

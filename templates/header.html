@@ -12,10 +12,10 @@
                 <div id="calendar"></div>
             </div>
 
+             {% if logged_in %}
                 <a href="{{ url_for('dashboard') }}">dash</a>
                 <a href="{{ url_for('create_task') }}">Create Task</a>
                 <a href="{{ url_for('manage_tasks') }}">Manage Tasks</a>
-             {% if logged_in %}
                 <a href="{{ url_for('logout') }}">Logout</a>
             {% else %}
                 <a href="{{ url_for('login') }}">Login</a>
@@ -40,7 +40,7 @@
         const firstDay = new Date(year, month, 1).getDay();
 
         // High-priority task dates from the backend
-        const highPriorityDates = {{ tasks | tojson | safe }};
+        const highPriorityDates = {{ high_priority_tasks | tojson | safe }};
 
         let table = "<table><tr>";
         const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

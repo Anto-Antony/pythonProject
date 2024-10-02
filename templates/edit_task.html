@@ -4,29 +4,141 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Task</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .edit-task-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .task-item {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .horizontal-fields {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="date"], input[type="time"], textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .icons {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-start;
+            margin-top: 10px;
+        }
+
+        .icons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+
+        button.submit-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button.submit-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
     {% include 'header.html' %}
     <div class="edit-task-container">
         <h2>Edit Task</h2>
         <form method="POST" action="{{ url_for('edit_task', task_id=task.id) }}">
-            <label for="task_name">Task Name</label>
-            <input type="text" id="task_name" name="task_name" value="{{ task.task_name }}" required>
-            <label for="due_date">Due Date</label>
-            <input type="date" id="due_date" name="due_date" value="{{ task.due_date }}" required>
-            <label for="due_time">Due Time</label>
-            <input type="time" id="due_time" name="due_time" value="{{ task.due_time }}" required>
-            <label for="priority">Priority</label>
-            <select id="priority" name="priority">
-                <option value="Low" {% if task.priority == 'Low' %}selected{% endif %}>Low</option>
-                <option value="Medium" {% if task.priority == 'Medium' %}selected{% endif %}>Medium</option>
-                <option value="High" {% if task.priority == 'High' %}selected{% endif %}>High</option>
-            </select>
-            <label for="description">Description</label>
-            <textarea id="description" name="description" rows="4" required>{{ task.description }}</textarea>
-            <button type="submit">Update Task</button>
+            <div class="task-item">
+                <div class="horizontal-fields">
+                    <div class="form-group">
+                        <label for="task_name">Task Name</label>
+                        <input type="text" id="task_name" name="task_name" value="{{ task.task_name }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" rows="4" required>{{ task.description }}</textarea>
+                    </div>
+                </div>
+
+                <div class="icons">
+                    <button type="button" aria-label="Due Date">
+                        <i class="bi bi-calendar3"></i>
+                        <input type="date" id="due_date" name="due_date" value="{{ task.due_date }}" required>
+                    </button>
+
+                    <button type="button" aria-label="Due Time">
+                        <i class="bi bi-clock-fill"></i>
+                        <input type="time" id="due_time" name="due_time" value="{{ task.due_time }}" required>
+                    </button>
+
+                    <button type="button" aria-label="Priority">
+                        <i class="bi bi-flag-fill"></i>
+                        <select id="priority" name="priority">
+                            <option value="Low" {% if task.priority == 'Low' %}selected{% endif %}>Low</option>
+                            <option value="Medium" {% if task.priority == 'Medium' %}selected{% endif %}>Medium</option>
+                            <option value="High" {% if task.priority == 'High' %}selected{% endif %}>High</option>
+                        </select>
+                    </button>
+                    <button type="button" aria-label="Recurring Task">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </button>
+                </div>
+                <div class="form-group">
+    <label for="recurring">Recurring Task</label>
+    <input type="checkbox" id="recurring" name="recurring" {% if task.recurring %}checked{% endif %}>
+</div>
+
+<div class="form-group">
+    <label for="recurring_type">Recurring Type</label>
+    <select id="recurring_type" name="recurring_type">
+        <option value="0" {% if task.recurring_type == 0 %}selected{% endif %}>None</option>
+        <option value="1" {% if task.recurring_type == 1 %}selected{% endif %}>Daily</option>
+        <option value="2" {% if task.recurring_type == 2 %}selected{% endif %}>Weekly</option>
+        <option value="3" {% if task.recurring_type == 3 %}selected{% endif %}>Monthly</option>
+    </select>
+</div>
+            </div>
+
+            <button type="submit" class="submit-btn">Update Task</button>
         </form>
     </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

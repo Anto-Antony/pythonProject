@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-<!--    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard_styles.css') }}">-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard_styles.css') }}">
 </head>
 <body>
 
@@ -13,30 +13,35 @@
     <div class="container">
         <div class="tasks-container">
             <h2>Tasks</h2>
-            {% set current_date_str = None %}
-            {% for task in task %}
-                {% set task_date_str = task['due_date'].strftime('%Y-%m-%d') %}
-                {% if task_date_str != current_date_str %}
-                    {% if current_date_str is not None %}
-                        </ul>
-                    {% endif %}
-                    <h3>{{ task_date_str }}</h3>
-                    <ul class="tasks-list">
-                    {% set current_date_str = task_date_str %}
-                {% endif %}
-                <li>
-                    {{ task.task_name }} - {{ task.due_time }}
-                    <span class="task-icon {{ task.priority|lower }}"></span>
-                    <div class="task-details">
-                        {{ task.description }}
-                    </div>
-                </li>
-            {% endfor %}
-            {% if task|length > 0 %}
+
+            {% if tasks %}
+    {% set current_date_str = '' %}
+    {% for task in tasks %}
+        {% if task['due_date'] != current_date_str %}
+            <!-- Close the previous list if it's not the first task -->
+            {% if current_date_str %}
                 </ul>
-            {% else %}
-                <p>No tasks available.</p>
             {% endif %}
+
+            <!-- Print the new date and open a new <ul> -->
+            <h3>{{ task['due_date'] }}</h3>
+            <ul class="tasks-list">
+            {% set current_date_str = task['due_date'] %}
+        {% endif %}
+
+        <li>
+            {{ task['task_name'] }} - {{ task['due_time'] }}
+            <span class="task-icon {{ task['priority']|lower }}"></span>
+            <div class="task-details">
+                {{ task['description'] }}
+            </div>
+        </li>
+    {% endfor %}
+    <!-- Close the last <ul> -->
+    </ul>
+{% else %}
+    <p>No tasks available.</p>
+{% endif %}
         </div>
     </div>
 
