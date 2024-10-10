@@ -1,19 +1,36 @@
+/* General Styles */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Roboto', sans-serif;
     margin: 0;
     padding: 0;
+    background-color: #F4F7FA;
+    color: #333;
     overflow-x: hidden;
 }
 
 header {
+    background-color: #333;
+    color: white;
+    position: sticky;
+    top: 0;
+    padding: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    background-color: #333;
-    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+header a {
+    color: #fff;
+    margin-right: 20px;
+    text-decoration: none;
+}
+
+header a:hover {
+    color: #00A8E8;
+}
+
+/* Form Container */
 .form-container {
     flex: 1;
     background-color: #f9f9f9;
@@ -41,6 +58,14 @@ header {
     margin-bottom: 20px;
     border: 1px solid #ddd;
     border-radius: 5px;
+    transition: border-color 0.3s ease;
+}
+
+.form-container input:focus,
+.form-container textarea:focus,
+.form-container select:focus {
+    border-color: #00A8E8;
+    outline: none;
 }
 
 .form-container button {
@@ -50,12 +75,14 @@ header {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 .form-container button:hover {
     background-color: #0056b3;
 }
 
+/* Flash Messages */
 .flashes {
     list-style-type: none;
     padding: 0;
@@ -77,6 +104,7 @@ header {
     color: #721c24;
 }
 
+/* Table Styles */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -94,6 +122,99 @@ table th {
     background-color: #f2f2f2;
 }
 
+/* Task Cards */
+.tasks-container ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.tasks-container li {
+    background-color: white;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.tasks-container li:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Task Priority */
+.task-priority {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.task-priority.low {
+    background-color: gray;
+}
+
+.task-priority.medium {
+    background-color: blue;
+}
+
+.task-priority.high {
+    background-color: red;
+}
+
+/* Task Details Hover */
+.task-details {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    top: 100%;
+    left: 0;
+    z-index: 1;
+}
+
+.tasks-container li:hover .task-details {
+    display: block;
+}
+
+/* Calendar Styles */
+.calendar-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.calendar-container th,
+.calendar-container td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+.calendar-container th {
+    background-color: #007bff;
+    color: white;
+}
+
+.calendar-container td:hover {
+    background-color: #f1f1f1;
+    cursor: pointer;
+}
+
+.calendar-container .today {
+    background-color: #007bff;
+    color: white;
+}
+
+.calendar-container .high-priority {
+    background-color: red;
+    color: white;
+}
+
+/* Edit Task Container */
 .edit-task-container {
     background-color: #f9f9f9;
     padding: 20px;
@@ -129,8 +250,24 @@ table th {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 .edit-task-container button:hover {
     background-color: #0056b3;
+}
+
+/* Media Queries for Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .tasks-container {
+        margin-bottom: 20px;
+    }
+
+    .calendar-container, .tasks-container {
+        width: 100%;
+    }
 }

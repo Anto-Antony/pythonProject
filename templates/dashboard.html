@@ -12,36 +12,34 @@
 
     <div class="container">
         <div class="tasks-container">
-            <h2>Tasks</h2>
+            <h2>Tasks for Today</h2>
 
             {% if tasks %}
-    {% set current_date_str = '' %}
-    {% for task in tasks %}
-        {% if task['due_date'] != current_date_str %}
-            <!-- Close the previous list if it's not the first task -->
-            {% if current_date_str %}
-                </ul>
+            <table class="task-table">
+                <thead>
+                    <tr>
+                        <th>Task Name</th>
+                        <th>Description</th>
+                        <th>Due Date</th>
+                        <th>Due Time</th>
+                        <th>Priority</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td>{{ task['task_name'] }}</td>
+                        <td>{{ task['description'] }}</td>
+                        <td>{{ task['due_date'] }}</td>
+                        <td>{{ task['due_time'] }}</td>
+                        <td>{{ task['priority'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No tasks available for today.</p>
             {% endif %}
-
-            <!-- Print the new date and open a new <ul> -->
-            <h3>{{ task['due_date'] }}</h3>
-            <ul class="tasks-list">
-            {% set current_date_str = task['due_date'] %}
-        {% endif %}
-
-        <li>
-            {{ task['task_name'] }} - {{ task['due_time'] }}
-            <span class="task-icon {{ task['priority']|lower }}"></span>
-            <div class="task-details">
-                {{ task['description'] }}
-            </div>
-        </li>
-    {% endfor %}
-    <!-- Close the last <ul> -->
-    </ul>
-{% else %}
-    <p>No tasks available.</p>
-{% endif %}
         </div>
     </div>
 

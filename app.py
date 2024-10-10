@@ -6,6 +6,7 @@ from db_config import get_db_connection
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import time, timedelta, datetime
 import traceback
+import requests
 
 
 app = Flask(__name__)
@@ -83,12 +84,6 @@ def register():
     return render_template('register.html', logged_in=False, high_priority_tasks=None)
 
 
-from datetime import time, timedelta
-from flask import flash, redirect, url_for, session, jsonify, render_template
-from datetime import datetime
-import traceback
-
-
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
     if 'user_id' not in session:
@@ -99,20 +94,25 @@ def dashboard():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # Get today's date
-        date = datetime.today().date()
-
-        # Fetch tasks for today
+        # Fetch all tasks for the logged-in user
         cursor.execute('SELECT task_name, due_date, due_time, priority, description '
-                       'FROM tasks WHERE user_id = %s AND DATE(due_date) = %s',
-                       (session['user_id'], date))
+                       'FROM tasks WHERE user_id = %s',
+                       (session['user_id'],))
         tasks1 = cursor.fetchall()
 
         for task in tasks1:
-            # Format due_date and due_time in Python
+            # Format due_date in YYYY-MM-DD format
             task['due_date'] = task['due_date'].strftime('%Y-%m-%d')
-            if isinstance(task['due_time'], (time, timedelta)):
+
+            # Handle due_time formatting, check if it's a time or timedelta object
+            if isinstance(task['due_time'], time):
                 task['due_time'] = task['due_time'].strftime('%H:%M:%S')
+            elif isinstance(task['due_time'], timedelta):
+                # Convert timedelta to hours and minutes
+                total_seconds = int(task['due_time'].total_seconds())
+                hours, remainder = divmod(total_seconds, 3600)
+                minutes, _ = divmod(remainder, 60)
+                task['due_time'] = f"{hours:02}:{minutes:02}:00"  # Assuming seconds are zero
 
         # Fetch high-priority task dates for the calendar
         cursor.execute('SELECT DISTINCT DATE(due_date) as due_date FROM tasks '
@@ -120,81 +120,87 @@ def dashboard():
                        (session['user_id'], 'High'))
         high_priority_tasks = cursor.fetchall()
 
-        # Format high-priority dates for JavaScript
         tasks = [hp_task['due_date'].strftime('%Y-%m-%d') for hp_task in high_priority_tasks]
 
-        # If no tasks found, set task to None (so that "No tasks available" will be shown)
-        if not tasks:
-            tasks = None
+        # If no tasks found, set tasks to None
+        if not tasks1:
+            tasks1 = None
 
     except Exception as e:
-        # Print full exception traceback for debugging
         print(f"Error: {e}")
         traceback.print_exc()
-
         flash('An error occurred while fetching tasks.', 'danger')
         return jsonify({'error': 'An error occurred while fetching tasks'}), 500
     finally:
         conn.close()
 
-    # Return with the correctly formatted data
+    # Render the dashboard with all tasks
     return render_template('dashboard.html', logged_in=True, tasks=tasks1, high_priority_tasks=tasks)
+
+
+
 
 @app.route('/create_task', methods=['GET', 'POST'])
 def create_task():
-    # Check if the user is logged in
     if 'user_id' not in session:
         flash('Please log in first.', 'danger')
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        # Get multiple tasks data from the form
-        task_names = request.form.getlist('task_name[]')
-        due_dates = request.form.getlist('due_date[]')
-        due_times = request.form.getlist('due_time[]')
-        priorities = request.form.getlist('priority[]')
-        descriptions = request.form.getlist('description[]')
-        recurring = request.form.getlist('recurring[]')
-        recurring_types = request.form.getlist('recurring_type[]')
+        task_description_input = request.form['task_description_input']  # Get task description input
+        # Call Gemini API to generate task details
+        api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyBTsIFup_qC0CmUzJw8KWjL_Shyjr6gMfY"
+        headers = {'Authorization': 'Bearer AIzaSyBTsIFup_qC0CmUzJw8KWjL_Shyjr6gMfY', 'Content-Type': 'application/json'}
+        payload = {"input": task_description_input}
+        response = requests.post(api_url, json=payload, headers=headers)
 
-        # Database connection
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        if response.status_code == 200:
+            tasks = response.json().get('taskDetails', [])  # Assuming task details returned
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        try:
-            for i in range(len(task_names)):
-                # Handle missing recurring field (checkbox) safely
-                is_recurring = 1 if i < len(recurring) and recurring[i] == 'on' else 0
-                recurring_type = int(recurring_types[i]) if i < len(recurring_types) else 0  # Default to 0 (None)
+            try:
+                for task in tasks:
+                    cursor.execute(
+                        'INSERT INTO tasks (user_id, task_name, due_date, due_time, priority, description, recurring, recurring_type) '
+                        'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
+                        (session['user_id'], task['taskName'], task['dueDate'], task['dueTime'], task['priority'],
+                         task['description'], task['recurring'], task['recurringType'])
+                    )
+                conn.commit()
+                flash('Tasks created successfully!', 'success')
+                # Fetch high-priority task dates for the calendar
+                cursor.execute('SELECT DISTINCT DATE(due_date) as due_date FROM tasks '
+                               'WHERE user_id = %s AND priority = %s',
+                               (session['user_id'], 'High'))
+                high_priority_tasks = cursor.fetchall()
 
-                cursor.execute(
-                    'INSERT INTO tasks (user_id, task_name, due_date, due_time, priority, description, recurring, recurring_type) '
-                    'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
-                    (session['user_id'], task_names[i], due_dates[i], due_times[i], priorities[i], descriptions[i], is_recurring, recurring_type)
-                )
+                tasks = [hp_task['due_date'].strftime('%Y-%m-%d') for hp_task in high_priority_tasks]
 
-            conn.commit()
-            flash('Tasks created successfully!', 'success')
-        except mysql.connector.Error as err:
-            flash(f'Error: {err}', 'danger')
-        finally:
-            cursor.close()
-            conn.close()
+            except mysql.connector.Error as err:
+                flash(f'Error: {err}', 'danger')
+            finally:
+                cursor.close()
+                conn.close()
+        else:
+            flash('Error with Gemini API', 'danger')
 
-    # Fetch high priority task dates and today's tasks
+    # Fetch high-priority task dates
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT due_date FROM tasks WHERE user_id = %s AND priority = %s', (session['user_id'], 'High'))
+
+    cursor.execute('SELECT DISTINCT DATE(due_date) as due_date FROM tasks '
+                   'WHERE user_id = %s AND priority = %s',
+                   (session['user_id'], 'High'))
     high_priority_tasks = cursor.fetchall()
+
+    # Format high-priority dates for passing to the template
+    high_priority_dates = [task['due_date'].strftime('%Y-%m-%d') for task in high_priority_tasks]
 
     cursor.close()
     conn.close()
 
-    # Extract dates for high priority tasks
-    task_dates = [task['due_date'].strftime('%Y-%m-%d') for task in high_priority_tasks]
-
-    # Render the create_task template and pass the variables
-    return render_template('create_task.html', logged_in=True, high_priority_tasks=task_dates)
+    return render_template('create_task.html', logged_in=True, high_priority_tasks=high_priority_dates)
 
 @app.route('/manage_tasks')
 def manage_tasks():

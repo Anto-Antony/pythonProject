@@ -1,116 +1,84 @@
 body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden; /* Prevent horizontal scroll */
-        }
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
 
-        .container {
-            display: flex;
-            margin-top: 20px;
-            padding-right: 350px; /* Adjust based on the sidebar width */
-        }
+.container {
+    display: flex;
+    margin-top: 20px;
+    padding-right: 350px; /* Adjust based on the sidebar width */
+}
 
-        .calendar-container {
-            margin-bottom: 20px;
-        }
+.calendar-container {
+    margin-bottom: 20px;
+}
 
-        .tasks-container {
-            flex: 1;
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 10px;
-        }
+.tasks-container {
+    flex: 1;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 10px;
+}
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background-color: #333;
-            color: white;
-        }
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #333;
+    color: white;
+}
 
-        .sidebar-container {
-            position: fixed;
-            top: 0;
-            right: 0;
-            height: 100%;
-            width: 400px;
-            background-color: #333;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            z-index: 1000;
-        }
+/* Sidebar */
+.sidebar-container {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 400px;
+    background-color: #333;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
 
-        .sidebar-container.active {
-            transform: translateX(0);
-        }
+.sidebar-container.active {
+    transform: translateX(0);
+}
 
-        .menu-button {
-            cursor: pointer;
-            color: white;
-            font-size: 18px;
-        }
+.menu-button {
+    cursor: pointer;
+    color: white;
+    font-size: 18px;
+}
 
-        .menu {
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            padding-top: 60px; /* Adjust for header height */
-        }
+.menu {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    padding-top: 60px; /* Adjust for header height */
+}
 
-        .menu a {
-            color: white;
-            text-decoration: none;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #007bff;
-            border-radius: 5px;
-        }
+.menu a {
+    color: white;
+    text-decoration: none;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #007bff;
+    border-radius: 5px;
+}
 
-        .menu a:hover {
-            background-color: #0056b3;
-        }
+.menu a:hover {
+    background-color: #0056b3;
+}
 
-        /* Style for the calendar table */
-        .calendar-container table {
+/* Calendar styles */
+.calendar-container table {
     width: 80%;
     border-collapse: collapse;
-}
-.tasks-container {
-    max-height: 400px;
-    overflow-y: scroll;
-}
-
-.tasks-container ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-.tasks-container li {
-    position: relative;
-    padding: 10px;
-    cursor: pointer;
-}
-
-.task-icon {
-    margin-left: 10px;
-}
-
-.task-details {
-    display: none;
-    position: absolute;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    padding: 10px;
-    top: 100%;
-    left: 0;
-    z-index: 1;
-}
-
-.tasks-container li:hover .task-details {
-    display: block;
 }
 
 .calendar-container th {
@@ -143,12 +111,41 @@ body {
     font-weight: bold;
 }
 
-.task-icon {
+/* Task Table Styles */
+.task-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: white;
+    border-radius: 10px;
+}
+
+.task-table th, .task-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.task-table th {
+    background-color: #f2f2f2;
+    color: #333;
+}
+
+.task-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.task-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Task priority indicator */
+.task-priority {
     display: inline-block;
     width: 10px;
     height: 10px;
-    margin-left: 10px;
     border-radius: 50%;
+    margin-right: 10px;
 }
 
 .high {
