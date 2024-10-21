@@ -1,16 +1,19 @@
 import os
-
-import mysql
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from db_config import get_db_connection
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import time, timedelta, datetime
 import traceback
-import requests
+import google.generativeai as genai
+import json
+import re
 
-
+# Configure the Google Gemini API
+genai.configure(api_key="AIzaSyAuM-2PrKXO-sXOQUYr6Ff4lZ5HmzPNk_c")
+model = genai.GenerativeModel('gemini-1.5-flash')
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'secrets.token_hex(16)')
+
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -31,7 +34,7 @@ def login():
                 flash('Login successful!', 'success')
                 return redirect(url_for('dashboard'))
             else:
-                flash('Invalid Password','danger')
+                flash('Invalid Password', 'danger')
         else:
             flash('Invalid credentials, please try again.', 'danger')
     return render_template('login.html', logged_in=False, high_priority_tasks=None)
@@ -138,69 +141,114 @@ def dashboard():
     return render_template('dashboard.html', logged_in=True, tasks=tasks1, high_priority_tasks=tasks)
 
 
-
-
+# Route for the create task page
 @app.route('/create_task', methods=['GET', 'POST'])
 def create_task():
     if 'user_id' not in session:
         flash('Please log in first.', 'danger')
         return redirect(url_for('login'))
 
+    tasks = []  # Initialize tasks as an empty list
+
     if request.method == 'POST':
-        task_description_input = request.form['task_description_input']  # Get task description input
-        # Call Gemini API to generate task details
-        api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyBTsIFup_qC0CmUzJw8KWjL_Shyjr6gMfY"
-        headers = {'Authorization': 'Bearer AIzaSyBTsIFup_qC0CmUzJw8KWjL_Shyjr6gMfY', 'Content-Type': 'application/json'}
-        payload = {"input": task_description_input}
-        response = requests.post(api_url, json=payload, headers=headers)
+        # Get the tasks from the form
+        task_names = request.form.getlist('task_name[]')
+        descriptions = request.form.getlist('description[]')
+        due_dates = request.form.getlist('due_date[]')
+        due_times = request.form.getlist('due_time[]')
 
-        if response.status_code == 200:
-            tasks = response.json().get('taskDetails', [])  # Assuming task details returned
-            conn = get_db_connection()
-            cursor = conn.cursor()
+        # Save each task in the database
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-            try:
-                for task in tasks:
-                    cursor.execute(
-                        'INSERT INTO tasks (user_id, task_name, due_date, due_time, priority, description, recurring, recurring_type) '
-                        'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
-                        (session['user_id'], task['taskName'], task['dueDate'], task['dueTime'], task['priority'],
-                         task['description'], task['recurring'], task['recurringType'])
-                    )
-                conn.commit()
-                flash('Tasks created successfully!', 'success')
-                # Fetch high-priority task dates for the calendar
-                cursor.execute('SELECT DISTINCT DATE(due_date) as due_date FROM tasks '
-                               'WHERE user_id = %s AND priority = %s',
-                               (session['user_id'], 'High'))
-                high_priority_tasks = cursor.fetchall()
+        try:
+            for task_name, description, due_date, due_time in zip(task_names, descriptions, due_dates, due_times):
+                cursor.execute(
+                    '''
+                    INSERT INTO tasks (user_id, task_name, due_date, due_time, priority, description, recurring, recurring_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ''',
+                    (session['user_id'], task_name, due_date or None, due_time or None, 'Low', description, 0, 0)
+                )
+            conn.commit()
+            flash('Tasks created successfully!', 'success')
+        except Exception as e:
+            flash(f'Error saving tasks: {str(e)}', 'danger')
+            conn.rollback()
+        finally:
+            cursor.close()
 
-                tasks = [hp_task['due_date'].strftime('%Y-%m-%d') for hp_task in high_priority_tasks]
+        # Fetch high-priority task dates for the calendar
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            '''
+            SELECT DISTINCT DATE(due_date) as due_date FROM tasks
+            WHERE user_id = %s AND priority = %s
+            ''',
+            (session['user_id'], 'High')
+        )
+        high_priority_tasks = cursor.fetchall()
+        tasks = [hp_task['due_date'].strftime('%Y-%m-%d') for hp_task in high_priority_tasks]
 
-            except mysql.connector.Error as err:
-                flash(f'Error: {err}', 'danger')
-            finally:
-                cursor.close()
-                conn.close()
-        else:
-            flash('Error with Gemini API', 'danger')
+        cursor.close()
+        conn.close()
 
-    # Fetch high-priority task dates
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    # If no high-priority tasks are found, ensure `tasks` remains an empty list
+    if not tasks:
+        tasks = []
 
-    cursor.execute('SELECT DISTINCT DATE(due_date) as due_date FROM tasks '
-                   'WHERE user_id = %s AND priority = %s',
-                   (session['user_id'], 'High'))
-    high_priority_tasks = cursor.fetchall()
+    return render_template('create_task.html', logged_in=True, high_priority_tasks=tasks)
 
-    # Format high-priority dates for passing to the template
-    high_priority_dates = [task['due_date'].strftime('%Y-%m-%d') for task in high_priority_tasks]
 
-    cursor.close()
-    conn.close()
+# Route to handle task extraction using the Gemini API
+@app.route('/extract_task_details', methods=['POST'])
+def extract_task_details():
+    data = request.json
+    passage = data.get('text', '')
 
-    return render_template('create_task.html', logged_in=True, high_priority_tasks=high_priority_dates)
+    # Get today's date in DD/MM/YY format
+    today_date = datetime.now().strftime("%d/%m/%Y")
+
+    # Create the prompt for the Gemini model
+    prompt = f"""
+    Extract the tasks from the following paragraph and format them as a valid JSON array:
+    [
+        {{
+    "Heading": "<task heading that is short and meaningful>",
+    "Description": "<task description that is detailed and properly explained>",
+    "Date": "<date in DD/MM/YY, if not provided use today's date {today_date}>",
+    "Time": "<time in HH:MM:00, use '00:00:00' if time is not provided>"
+        }},
+        ...
+    ]
+
+    Paragraph: "{passage}"
+    """
+
+    try:
+        # Generate content using the Google Gemini API
+        response = model.generate_content(prompt)
+
+        # Access the generated content (Assuming 'text' or similar is the correct attribute)
+        response_text = response.text if hasattr(response, 'text') else str(response)
+
+        cleaned_response_text = re.sub(r'```json|```', '', response_text).strip()
+
+        # Validate JSON format before sending it back
+        try:
+            parsed_json = json.loads(cleaned_response_text)
+            print(parsed_json)
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+            print(f"Cleaned response: {cleaned_response_text}")
+            # Return an error message as JSON for debugging purposes
+            return jsonify({"error": "Invalid JSON format generated by AI", "details": cleaned_response_text}), 500
+
+        # If JSON is valid, proceed to return it
+        return jsonify({'result': parsed_json})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/manage_tasks')
 def manage_tasks():
@@ -233,7 +281,8 @@ def manage_tasks():
     task_dates = [task['due_date'].strftime('%Y-%m-%d') for task in high_priority_tasks]
 
     # Return the necessary variables
-    return render_template('manage_tasks.html', logged_in=True, task=task, high_priority_tasks=task_dates, todays_tasks=todays_tasks)
+    return render_template('manage_tasks.html', logged_in=True, task=task, high_priority_tasks=task_dates,
+                           todays_tasks=todays_tasks)
 
 
 @app.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
@@ -257,9 +306,11 @@ def edit_task(task_id):
 
         try:
             cursor.execute(
-                'UPDATE tasks SET task_name = %s, due_date = %s, due_time = %s, priority = %s, description = %s, recurring = %s, recurring_type = %s WHERE '
+                'UPDATE tasks SET task_name = %s, due_date = %s, due_time = %s, priority = %s, description = %s, '
+                'recurring = %s, recurring_type = %s WHERE'
                 'id = %s AND user_id = %s',
-                (task_name, due_date, due_time, priority, description,  is_recurring, recurring_type, task_id, session['user_id']))
+                (task_name, due_date, due_time, priority, description, is_recurring, recurring_type, task_id,
+                 session['user_id']))
             conn.commit()
         finally:
             conn.close()

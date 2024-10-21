@@ -159,3 +159,77 @@ header {
 .low {
     background-color: gray;
 }
+
+/* DARK MODE STYLES */
+body.dark {
+    background-color: #1e1e2d;
+    color: #eee;
+}
+
+body.dark .tasks-container {
+    background-color: #333;
+    color: #eee;
+}
+
+body.dark header {
+    background-color: #222;
+    color: #eee;
+}
+
+body.dark .sidebar-container {
+    background-color: #222;
+    color: #eee;
+}
+
+body.dark .menu a {
+    background-color: #444;
+    color: #eee;
+}
+
+body.dark .menu a:hover {
+    background-color: #555;
+}
+
+/* Calendar Styles for Dark Mode */
+body.dark .calendar-container th {
+    background-color: #444;
+    color: #eee;
+}
+
+body.dark .calendar-container td {
+    border-color: #555;
+    color: #eee;
+}
+
+body.dark .calendar-container td:hover {
+    background-color: #444;
+}
+
+body.dark .calendar-container .today {
+    background-color: #007bff;
+    color: white;
+}
+
+body.dark .calendar-container .high-priority {
+    background-color: red;
+    color: white;
+}
+
+/* Task Table Styles for Dark Mode */
+body.dark .task-table {
+    background-color: #333;
+    color: #eee;
+}
+
+body.dark .task-table th {
+    background-color: #444;
+    color: #eee;
+}
+
+body.dark .task-table tr:nth-child(even) {
+    background-color: #444;
+}
+
+body.dark .task-table tr:hover {
+    background-color: #555;
+}

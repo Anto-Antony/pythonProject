@@ -8,6 +8,47 @@ body {
     overflow-x: hidden;
 }
 
+/* Dark Mode Variables */
+:root {
+    --background-color-dark: #1e1e2d;
+    --text-color-dark: #eee;
+    --input-bg-dark: #333;
+    --input-border-dark: #555;
+    --button-bg-dark: #007bff;
+    --button-text-dark: #fff;
+}
+
+/* Dark Mode Styles */
+body.dark {
+    background-color: var(--background-color-dark);
+    color: var(--text-color-dark);
+}
+
+body.dark input,
+body.dark textarea,
+body.dark select {
+    background-color: var(--input-bg-dark);
+    border: 1px solid var(--input-border-dark);
+    color: var(--text-color-dark);
+}
+
+body.dark button {
+    background-color: var(--button-bg-dark);
+    color: var(--button-text-dark);
+}
+
+body.dark header {
+    background-color: #222;
+    color: white;
+}
+
+body.dark .calendar-container th,
+body.dark .calendar-container td {
+    background-color: var(--input-bg-dark);
+    color: var(--text-color-dark);
+}
+
+/* Header */
 header {
     background-color: #333;
     color: white;
@@ -36,7 +77,7 @@ header a:hover {
     background-color: #f9f9f9;
     padding: 20px;
     border-radius: 10px;
-    margin: 20px;
+    margin: 40px 20px; /* Increased margin to move form lower */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
@@ -267,7 +308,25 @@ table th {
         margin-bottom: 20px;
     }
 
-    .calendar-container, .tasks-container {
+    .calendar-container,
+    .tasks-container {
         width: 100%;
     }
+}
+
+/* Dark Mode Toggle Button */
+.dark-mode-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+body.dark .dark-mode-toggle {
+    background-color: #0056b3;
 }

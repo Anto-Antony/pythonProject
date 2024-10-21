@@ -4,31 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Task</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-<style>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+        }
+
         .form-container {
-            max-width: 600px;
-            margin: 0 auto;
+            max-width: 700px;
+            margin: 30px auto;
             padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h2 {
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #007bff;
         }
 
         .task-item {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            background-color: #f9f9f9;
             border: 1px solid #ddd;
             padding: 15px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             position: relative;
+            transition: box-shadow 0.3s;
+        }
+
+        .task-item:hover {
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
         .horizontal-fields {
             display: flex;
             justify-content: space-between;
-            gap: 20px;
+            gap: 15px;
         }
 
         .form-group {
@@ -39,43 +56,27 @@
 
         label {
             font-weight: bold;
+            color: #555;
         }
 
-        input[type="text"], textarea {
-            width: 100%;
+        input[type="text"], textarea, input[type="date"], input[type="time"] {
             padding: 10px;
             margin-top: 5px;
             border: 1px solid #ccc;
             border-radius: 5px;
+            transition: border-color 0.3s;
         }
 
-        .icons {
-            display: flex;
-            gap: 15px;
-            justify-content: flex-start;
-            margin-top: 10px;
-        }
-
-        .icons button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.5rem;
-        }
-
-        .hidden-fields {
-            display: none;
-        }
-
-        .hidden-fields.active {
-            display: block;
+        input[type="text"]:focus, textarea:focus, input[type="date"]:focus, input[type="time"]:focus {
+            border-color: #007bff;
+            outline: none;
         }
 
         .delete-task {
             position: absolute;
             top: 10px;
             right: 10px;
-            background-color: red;
+            background-color: #dc3545;
             color: white;
             border: none;
             border-radius: 50%;
@@ -86,20 +87,52 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            transition: background-color 0.3s;
         }
 
-        button.submit-btn {
-            margin-top: 20px;
-            padding: 10px 20px;
+        .delete-task:hover {
+            background-color: #c82333;
+        }
+
+        .btn-primary {
             background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+            border-color: #007bff;
         }
 
-        button.submit-btn:hover {
+        .btn-primary:hover {
             background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #218838;
+        }
+
+        .hidden-fields {
+            display: none;
+        }
+
+        .hidden-fields.active {
+            display: block;
+        }
+
+        .form-control:focus {
+            box-shadow: none;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: background-color 0.3s;
         }
     </style>
 </head>
@@ -108,78 +141,55 @@
     <div class="form-container">
         <h2>Create Task</h2>
 
-        <!-- Text area for generating tasks from input text -->
+        <!-- Text area for entering task details -->
         <div class="form-group">
             <label for="task_input_text">Task Description Input</label>
             <textarea id="task_input_text" rows="4" class="form-control" placeholder="Enter your task details here..."></textarea>
-            <button type="button" id="generate-task-btn" class="btn btn-success mt-2">Generate Task</button>
+            <button type="button" id="generate-task-btn" class="btn btn-success mt-2 w-100">Generate Tasks</button>
         </div>
-        <div class="form-group">
-    <label for="api_output">OpenAI API Output</label>
-    <div id="api_output" style="border: 1px solid #ccc; padding: 10px; min-height: 100px; background-color: #f9f9f9;">
-        <!-- The raw OpenAI result will be shown here -->
-    </div>
-    </div>
 
-<form method="POST" action="#">
-            <div id="task-list">
+        <form method="POST" action="/create_task">
+            <div id="task-list" class="mt-4">
                 <div class="task-item">
-                    <button type="button" class="delete-task">&times;</button>
+                    <button type="button" class="btn btn-danger btn-sm delete-task">&times;</button>
 
-                    <div class="horizontal-fields">
-                        <div class="form-group">
+                    <div class="horizontal-fields d-flex gap-2">
+                        <div class="form-group flex-fill">
                             <label for="task_name">Task Name</label>
-                            <input type="text" id="task_name" name="task_name[]" required>
+                            <input type="text" id="task_name" name="task_name[]" class="form-control" required>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group flex-fill">
                             <label for="description">Description</label>
-                            <textarea id="description" name="description[]" rows="4" required></textarea>
+                            <textarea id="description" name="description[]" rows="2" class="form-control" required></textarea>
                         </div>
                     </div>
 
-                    <div class="icons">
-                        <button type="button" onclick="toggleField(this, 'due_date_field')" aria-label="Due Date">
-                            <i class="bi bi-calendar3"></i>
-                        </button>
-
-                        <button type="button" onclick="toggleField(this, 'priority_field')" aria-label="Priority">
-                            <i class="bi bi-flag-fill"></i>
-                        </button>
-
-                        <button type="button" onclick="toggleField(this, 'recurring_field')" aria-label="Recurring Task">
-                            <i class="bi bi-arrow-repeat"></i>
-                        </button>
-
-                        <button type="button" onclick="toggleField(this, 'time_field')" aria-label="Task Time">
-                            <i class="bi bi-clock"></i>
-                        </button>
+                    <div class="horizontal-fields d-flex gap-2">
+                        <div class="form-group">
+                            <label for="due_date">Due Date</label>
+                            <input type="date" id="due_date" name="due_date[]" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="due_time">Due Time</label>
+                            <input type="time" id="due_time" name="due_time[]" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="priority">Priority</label>
+                            <select id="priority" name="priority[]" class="form-control">
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="hidden-fields due_date_field">
-                        <label for="due_date">Due Date</label>
-                        <input type="date" id="due_date" name="due_date[]">
-                    </div>
-
-                    <div class="hidden-fields priority_field">
-                        <label for="priority">Priority</label>
-                        <select id="priority" name="priority[]">
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
-                    </div>
-                    <div class="hidden-fields time_field">
-                        <label for="due_time">Due Time</label>
-                        <input type="time" id="due_time" name="due_time[]">
-                    </div>
-
-                    <div class="hidden-fields recurring_field">
-                        <label for="recurring">Recurring Task</label>
-                        <input type="checkbox" id="recurring" name="recurring[]">
-
+                        <label for="recurring">Recurring</label>
+                        <input type="checkbox" id="recurring" name="recurring[]" class="form-check-input">
+                    <!-- Recurring Task Fields -->
+                    <div class="hidden-fields mt-2">
                         <label for="recurring_type">Recurring Type</label>
-                        <select id="recurring_type" name="recurring_type[]">
+                        <select id="recurring_type" name="recurring_type[]" class="form-control">
                             <option value="0">None</option>
                             <option value="1">Daily</option>
                             <option value="2">Weekly</option>
@@ -189,122 +199,92 @@
                 </div>
             </div>
 
-            <button type="button" id="add-task-btn" class="btn btn-primary">Add Another Task</button>
-            <button type="submit" class="submit-btn">Create Task</button>
+            <button type="button" id="add-task-btn" class="btn btn-primary mt-3">Add Another Task</button>
+            <button type="submit" class="btn btn-primary submit-btn mt-3">Create Tasks</button>
         </form>
     </div>
 
+
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
+     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-       // Add new task
-document.getElementById('add-task-btn').addEventListener('click', function() {
-    const taskList = document.getElementById('task-list');
-    const newTask = document.querySelector('.task-item').cloneNode(true);
-    newTask.querySelectorAll('input, textarea, select').forEach(input => input.value = ''); // Clear input values
-    taskList.appendChild(newTask);
-});
-
-// Toggle field visibility
-function toggleField(button, fieldClass) {
-    const field = button.closest('.task-item').querySelector('.' + fieldClass);
-    field.classList.toggle('active');
-}
-
-// Delete task
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('delete-task')) {
-        const taskItem = e.target.closest('.task-item');
-        taskItem.remove();
-    }
-});
-
-// Split the input text into multiple tasks based on periods (.) or newlines (\n)
-function splitIntoTasks(text) {
-    return text.split(/[\.\n]+/).map(task => task.trim()).filter(task => task.length > 0);
-}
-
-// Call Gemini API to generate task details
-async function callGeminiAPI(taskText) {
-    try {
-        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyBTsIFup_qC0CmUzJw8KWjL_Shyjr6gMfY', { // Example Gemini API endpoint
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer AIzaSyBTsIFup_qC0CmUzJw8KWjL_Shyjr6gMfY`, // Replace with actual Gemini API key
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                input: taskText
-            })
-        });
-
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Gemini API Error:", errorData);
-
-            // Check if the errorData contains an 'error' property, and if so, display its message.
-            // Otherwise, provide a fallback error message.
-            const errorMessage = errorData.error ? errorData.error.message : "An unknown error occurred.";
-            throw new Error(`Gemini API Error: ${errorMessage}`);
+// Toggle visibility of recurring fields based on the checkbox state
+document.getElementById('task-list').addEventListener('change', function (e) {
+    if (e.target.matches('input[name="recurring[]"]')) {
+        const recurringField = e.target.closest('.task-item').querySelector('.hidden-fields');
+        if (e.target.checked) {
+            recurringField.classList.add('active');
+        } else {
+            recurringField.classList.remove('active');
         }
-
-        const data = await response.json();
-
-        // Assuming the response is JSON with task details
-        const taskDetails = data.taskDetails; // Adjust based on the actual response structure
-
-        // Display the result in the "api_output" div
-        document.getElementById('api_output').textContent = JSON.stringify(taskDetails, null, 2);
-
-        return taskDetails; // Return the generated task details
-    } catch (error) {
-        document.getElementById('api_output').textContent = `Error: ${error.message}`;
-        console.error("Gemini API error:", error);
-    }
-}
-
-// Add a task item to the form dynamically, including task name, description, date, and time
-function addTaskToForm(taskName, taskDescription, taskDate = null, taskTime = null) {
-    const taskList = document.getElementById('task-list');
-
-    // Clone the first task item to create a new one
-    const newTaskItem = document.querySelector('.task-item').cloneNode(true);
-    newTaskItem.querySelectorAll('input, textarea').forEach(input => input.value = ''); // Clear input values
-
-    // Fill in the task name and description
-    newTaskItem.querySelector('#task_name').value = taskName;
-    newTaskItem.querySelector('#description').value = taskDescription;
-
-    // Fill in the date if provided
-    if (taskDate) {
-        newTaskItem.querySelector('#due_date').value = taskDate;
-    }
-
-    // Fill in the time if provided
-    if (taskTime) {
-        newTaskItem.querySelector('#due_time').value = taskTime;
-    }
-
-    // Append the new task item to the task list
-    taskList.appendChild(newTaskItem);
-}
-
-// Event listener for generating tasks using Gemini API
-document.getElementById('generate-task-btn').addEventListener('click', async function() {
-    const inputText = document.getElementById('task_input_text').value;
-
-    if (inputText.trim()) {
-        const taskDetails = await callGeminiAPI(inputText); // Use Gemini API
-
-        // Assuming taskDetails is an array of tasks, where each task has name, description, date, and time
-        taskDetails.forEach(task => {
-            const { taskName, taskDescription, taskDate, taskTime } = task;
-            addTaskToForm(taskName, taskDescription, taskDate, taskTime);
-        });
     }
 });
+
+        // Handle generating tasks using AI
+      document.getElementById('generate-task-btn').addEventListener('click', async function() {
+    const inputText = document.getElementById('task_input_text').value;
+    if (inputText.trim()) {
+        try {
+            const response = await fetch('/extract_task_details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: inputText })
+            });
+
+            const data = await response.json();
+
+            if (data.result) {
+                // Check if data.result is a string before trimming
+                const cleanedData = typeof data.result === 'string' ? data.result.trim() : JSON.stringify(data.result);
+
+                try {
+                    // Parse the cleaned JSON string
+                    const taskDetails = JSON.parse(cleanedData);
+
+
+                    // Parse the task details and add them to the form
+                    taskDetails.forEach(detail => {
+                        const newTask = document.querySelector('.task-item').cloneNode(true);
+                        newTask.querySelector('input[name="task_name[]"]').value = detail.Heading || '';
+                        newTask.querySelector('textarea[name="description[]"]').value = detail.Description || '';
+                        if (detail.Date) {
+                        const [day, month, year] = detail.Date.split('/');
+                        const formattedDate = `${year}-${month}-${day}`;
+                        newTask.querySelector('input[name="due_date[]"]').value = formattedDate;
+                        }
+                        newTask.querySelector('input[name="due_time[]"]').value = detail.Time || '';
+                        document.getElementById('task-list').appendChild(newTask);
+                    });
+                } catch (jsonError) {
+                    console.error("JSON parsing error:", jsonError);
+                    alert('The AI response is not valid JSON. Please check the formatting.');
+                }
+            } else {
+                alert(data.error || 'Failed to extract task details.');
+            }
+        } catch (error) {
+            alert('An error occurred: ' + error.message);
+        }
+    } else {
+        alert('Please enter task details.');
+    }
+});
+
+
+        // Add new task field
+        document.getElementById('add-task-btn').addEventListener('click', function() {
+            const taskList = document.getElementById('task-list');
+            const newTask = document.querySelector('.task-item').cloneNode(true);
+            newTask.querySelectorAll('input, textarea').forEach(input => input.value = ''); // Clear input values
+            taskList.appendChild(newTask);
+        });
+
+        // Delete task functionality
+        document.getElementById('task-list').addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-task')) {
+                e.target.closest('.task-item').remove();
+            }
+        });
     </script>
 </body>
 </html>

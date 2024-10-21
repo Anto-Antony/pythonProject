@@ -3,41 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Register - AI To-Do List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --background-color-light: #f4f7fc;
+            --text-color-light: #333;
+            --input-bg-light: #fff;
+            --input-border-light: #ccc;
+            --button-bg-light: #007bff;
+            --button-text-light: #fff;
+
+            --background-color-dark: #1e1e2d;
+            --text-color-dark: #eee;
+            --input-bg-dark: #333;
+            --input-border-dark: #555;
+            --button-bg-dark: #007bff;
+            --button-text-dark: #fff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color-light);
+            color: var(--text-color-light);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            margin-top: 120px;  /* Space for the header */
+        }
+
+        .form-container {
+            background-color: var(--input-bg-light);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            margin-top: 0px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            margin-top: 10px;
+            font-weight: bold;
+            display: block;
+        }
+
+        input[type="email"], input[type="password"], input[type="tel"], input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid var(--input-border-light);
+            border-radius: 5px;
+            background-color: var(--input-bg-light);
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: var(--button-bg-light);
+            color: var(--button-text-light);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .flashes {
+            margin-top: 20px;
+            list-style: none;
+            padding: 0;
+            color: red;
+            font-size: 0.9em;
+        }
+
+        p {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        p a {
+            color: var(--button-bg-light);
+            text-decoration: none;
+        }
+
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--button-bg-light);
+            color: var(--button-text-light);
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        body.dark {
+            background-color: var(--background-color-dark);
+            color: var(--text-color-dark);
+        }
+
+        body.dark .form-container {
+            background-color: var(--input-bg-dark);
+        }
+
+        body.dark input[type="email"],
+        body.dark input[type="password"],
+        body.dark input[type="tel"],
+        body.dark input[type="text"] {
+            background-color: var(--input-bg-dark);
+            border: 1px solid var(--input-border-dark);
+        }
+
+        body.dark button {
+            background-color: var(--button-bg-dark);
+            color: var(--button-text-dark);
+        }
+
+        body.dark .dark-mode-toggle {
+            background-color: var(--button-bg-dark);
+            color: var(--button-text-dark);
+        }
+    </style>
 </head>
 <body>
+    <!-- Header -->
     {% include 'header.html' %}
-    <div class="form-container">
-        <h2>Register</h2>
-        <form method="POST" action="{{ url_for('register') }}">
-            <label for="email">Email</label>
-            <input id="email" name="email" required type="email">
 
-            <label for="phone">Phone Number</label>
-            <input id="phone" name="phone" required type="tel">
 
-            <label for="profession">Profession</label>
-            <input id="profession" name="profession" required type="text">
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="form-container">
+            <h2>Register</h2>
+            <form method="POST" action="{{ url_for('register') }}">
+                <label for="email">Email</label>
+                <input id="email" name="email" required type="email" placeholder="Enter your email">
 
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
+                <label for="phone">Phone Number</label>
+                <input id="phone" name="phone" required type="tel" placeholder="Enter your phone number">
 
-            <label for="confirm_password">Confirm Password</label>
-            <input type="password" id="confirm_password" name="confirm_password" required>
+                <label for="profession">Profession</label>
+                <input id="profession" name="profession" required type="text" placeholder="Enter your profession">
 
-            <button type="submit">Register</button>
-        </form>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            <ul class="flashes">
-              {% for category, message in messages %}
-                <li class="{{ category }}">{{ message }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        {% endwith %}
-        <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+
+                <label for="confirm_password">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your password">
+
+                <button type="submit">Register</button>
+            </form>
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <ul class="flashes">
+                        {% for category, message in messages %}
+                            <li class="{{ category }}">{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+
+            <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+        </div>
     </div>
+
 </body>
 </html>

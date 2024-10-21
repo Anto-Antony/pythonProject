@@ -14,6 +14,7 @@
             <thead>
                 <tr>
                     <th>Task Name</th>
+                     <th>Description</th>
                     <th>Due Date</th>
                     <th>Due Time</th>
                     <th>Priority</th>
@@ -24,6 +25,7 @@
                 {% for task in task %}
                 <tr>
                     <td>{{ task.task_name }}</td>
+                    <td>{{ task.description }}</td>
                     <td>{{ task.due_date }}</td>
                     <td>{{ task.due_time }}</td>
                     <td>{{ task.priority }}</td>

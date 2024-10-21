@@ -1,36 +1,57 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard_styles.css') }}">
+
+<header>
+    <h1>Welcome to Your Dashboard</h1>
+    <div class="menu-button" onclick="toggleMenu()">☰ Menu</div>
+</header>
+
+<div class="sidebar-container" id="sidebar">
+    <div class="menu">
+        <div class="calendar-container">
+            <h2 style="color: white;">High Priority Tasks Calendar</h2>
 
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard_styles.css') }}">
-    <header>
-        <h1>Welcome to Your Dashboard</h1>
-        <div class="menu-button" onclick="toggleMenu()">☰ Menu</div>
-    </header>
-    <div class="sidebar-container" id="sidebar">
-        <div class="menu">
-            <div class="calendar-container">
-                <h2>High Priority Tasks Calendar</h2>
-                <div id="calendar"></div>
-            </div>
+            <div id="calendar"></div>
+        </div>
 
-             {% if logged_in %}
-                <a href="{{ url_for('dashboard') }}">dash</a>
-                <a href="{{ url_for('create_task') }}">Create Task</a>
-                <a href="{{ url_for('manage_tasks') }}">Manage Tasks</a>
-                <a href="{{ url_for('logout') }}">Logout</a>
-            {% else %}
-                <a href="{{ url_for('login') }}">Login</a>
-            {% endif %}
+        {% if logged_in %}
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('create_task') }}">Create Task</a>
+            <a href="{{ url_for('manage_tasks') }}">Manage Tasks</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">Login</a>
+        {% endif %}
+
+        <!-- Dark Mode Toggle Option in the Sidebar -->
+        <div class="sidebar-darkmode-toggle">
+            <button id="darkModeToggle" class="btn btn-dark">🌙 Dark Mode</button>
         </div>
     </div>
+</div>
 
+<script>
+    // Menu Toggle Functionality
+    function toggleMenu() {
+        var sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('active');
+    }
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.10.2/main.min.js"></script>
-    <script>
-        function toggleMenu() {
-            var sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('active');
+    // Dark Mode Toggle Functionality
+    const toggle = document.getElementById('darkModeToggle');
+    const body = document.body;
+
+    toggle.addEventListener('click', function () {
+        body.classList.toggle('dark');
+        if (body.classList.contains('dark')) {
+            toggle.textContent = '☀️ Light Mode';
+        } else {
+            toggle.textContent = '🌙 Dark Mode';
         }
-        window.onload = function() {
+    });
+
+    // Calendar Logic
+    window.onload = function() {
         const date = new Date();
         const month = date.getMonth();
         const year = date.getFullYear();
@@ -39,7 +60,6 @@
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const firstDay = new Date(year, month, 1).getDay();
 
-        // High-priority task dates from the backend
         const highPriorityDates = {{ high_priority_tasks | tojson | safe }};
 
         let table = "<table><tr>";
@@ -73,6 +93,4 @@
         table += "</tr></table>";
         calendar.innerHTML = table;
     };
-
-    </script>
-
+</script>
