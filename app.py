@@ -2,11 +2,14 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from db_config import get_db_connection
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import time, timedelta, datetime
+from datetime import date, time, timedelta, datetime
 import traceback
 import google.generativeai as genai
 import json
 import re
+
+from flask_wtf import CSRFProtect
+
 
 # Configure the Google Gemini API
 genai.configure(api_key="AIzaSyAuM-2PrKXO-sXOQUYr6Ff4lZ5HmzPNk_c")
@@ -211,18 +214,25 @@ def extract_task_details():
 
     # Create the prompt for the Gemini model
     prompt = f"""
-    Extract the tasks from the following paragraph and format them as a valid JSON array:
-    [
-        {{
-    "Heading": "<task heading that is short and meaningful>",
-    "Description": "<task description that is detailed and properly explained>",
-    "Date": "<date in DD/MM/YY, if not provided use today's date {today_date}>",
-    "Time": "<time in HH:MM:00, use '00:00:00' if time is not provided>"
-        }},
-        ...
-    ]
+        Extract all tasks mentioned in the following paragraph and format them as a valid JSON array. Each task should have a short and meaningful heading, a detailed description, a date (in DD/MM/YY format, using today's date {today_date} if not provided), and a time (in HH:MM:00 format, using '00:00:00' if time is not provided). Each task should be a separate JSON object in the array.
 
-    Paragraph: "{passage}"
+        Example output:
+        [
+            {{
+                "Heading": "Client Meeting",
+                "Description": "Schedule a meeting with the client for the project discussion.",
+                "Date": "23/10/2024",
+                "Time": "10:00:00"
+            }},
+            {{
+                "Heading": "Submit Report",
+                "Description": "Submit the final project report to the manager by the end of the day.",
+                "Date": "23/10/2024",
+                "Time": "17:00:00"
+            }}
+        ]
+
+        Paragraph: "{passage}"
     """
 
     try:
@@ -250,39 +260,105 @@ def extract_task_details():
         return jsonify({'error': str(e)}), 500
 
 
+# Route to manage tasks and categories
 @app.route('/manage_tasks')
 def manage_tasks():
-    # Check if the user is logged in
     if 'user_id' not in session:
         flash('Please log in first.', 'danger')
         return redirect(url_for('login'))
 
-    # Database connection
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        # Fetch all tasks for the logged-in user
-        cursor.execute('SELECT * FROM tasks WHERE user_id = %s', (session['user_id'],))
-        task = cursor.fetchall()
+        # Fetch all tasks and their categories for the logged-in user
+        cursor.execute('''
+            SELECT tasks.*, categories.name AS category_name, categories.id AS category_id
+            FROM tasks
+            LEFT JOIN categories ON tasks.category_id = categories.id
+            WHERE tasks.user_id = %s
+        ''', (session['user_id'],))
+        tasks = cursor.fetchall()
 
-        # Fetch high priority task dates
-        cursor.execute('SELECT due_date FROM tasks WHERE user_id = %s AND priority = %s', (session['user_id'], 'High'))
+        # Fetch all available categories
+        cursor.execute('SELECT * FROM categories WHERE user_id = %s', (session['user_id'],))
+        categories = cursor.fetchall()
+        # Fetch high-priority task dates for the calendar
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            '''
+            SELECT DISTINCT DATE(due_date) as due_date FROM tasks
+            WHERE user_id = %s AND priority = %s
+            ''',
+            (session['user_id'], 'High')
+        )
         high_priority_tasks = cursor.fetchall()
+        high_tasks = [hp_task['due_date'].strftime('%Y-%m-%d') for hp_task in high_priority_tasks]
 
-        # Fetch today's tasks
-        cursor.execute('SELECT * FROM tasks WHERE user_id = %s AND due_date = %s',
-                       (session['user_id'], datetime.today().date()))
-        todays_tasks = cursor.fetchall()
     finally:
         cursor.close()
         conn.close()
 
-    # Extract dates for high priority tasks
-    task_dates = [task['due_date'].strftime('%Y-%m-%d') for task in high_priority_tasks]
+        # If no high-priority tasks are found, ensure `tasks` remains an empty list
+    if not tasks:
+        tasks = []
 
-    # Return the necessary variables
-    return render_template('manage_tasks.html', logged_in=True, task=task, high_priority_tasks=task_dates,
-                           todays_tasks=todays_tasks)
+    return render_template('manage_tasks.html', logged_in=True, tasks=tasks, high_priority_tasks=high_tasks,
+                           categories=categories)
+
+
+# Route to create a new category
+@app.route('/create_category', methods=['POST'])
+def create_category():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'danger')
+        return redirect(url_for('login'))
+
+    category_name = request.form.get('category_name')
+    if not category_name:
+        flash('Category name is required.', 'danger')
+        return redirect(url_for('manage_tasks'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO categories (name, user_id) VALUES (%s, %s)', (category_name, session['user_id']))
+        conn.commit()
+        flash('Category created successfully!', 'success')
+    except Exception as e:
+        flash(f'Error creating category: {str(e)}', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('manage_tasks'))
+
+
+# Route to update a task's category
+@app.route('/update_task_category/<int:task_id>', methods=['POST'])
+def update_task_category(task_id):
+    if 'user_id' not in session:
+        flash('Please log in first.', 'danger')
+        return redirect(url_for('login'))
+
+    category_id = request.form.get('category_id')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            UPDATE tasks
+            SET category_id = %s
+            WHERE id = %s AND user_id = %s
+        ''', (category_id if category_id else None, task_id, session['user_id']))
+        conn.commit()
+        flash('Task category updated successfully!', 'success')
+    except Exception as e:
+        flash(f'Error updating task category: {str(e)}', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('manage_tasks'))
 
 
 @app.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
@@ -359,6 +435,93 @@ def delete_task(task_id):
         conn.close()
 
     return redirect(url_for('manage_tasks'))
+
+@app.route('/generate_categories', methods=['POST'])
+def generate_categories():
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Please log in first.'})
+
+    # Database connection
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        # Fetch tasks with NULL categories for the logged-in user
+        cursor.execute('SELECT * FROM tasks WHERE user_id = %s AND category_id IS NULL', (session['user_id'],))
+        tasks = cursor.fetchall()
+
+        # If no tasks need categorization, return early
+        if not tasks:
+            return jsonify({'success': False, 'message': 'No tasks with NULL categories to categorize.'})
+
+        # Convert tasks to JSON-friendly format by serializing dates to strings
+        for task in tasks:
+            if isinstance(task.get('due_date'), (date, datetime)):
+                task['due_date'] = task['due_date'].strftime('%Y-%m-%d')
+            if isinstance(task.get('due_time'), (date, datetime)):
+                task['due_time'] = task['due_time'].strftime('%H:%M:%S')
+
+        # Convert tasks to JSON format
+        try:
+            tasks_json = json.dumps(tasks, indent=2)
+        except (TypeError, ValueError) as e:
+            print(f"Error converting tasks to JSON: {e}")
+            return jsonify({'success': False, 'message': 'Error processing task data.'})
+
+        # Prepare the prompt for AI
+        prompt = f"""
+        You are provided with a list of tasks stored in a MySQL table named `tasks` with a reference to a `categories` table. Each task may or may not have a category assigned to it. Your job is to generate SQL `UPDATE` queries that assign appropriate `category_id` values to tasks based on their descriptions. Use the following structure:
+
+        **Table `tasks`:**
+        - `id` (INT): The unique identifier for the task.
+        - `task_name` (VARCHAR): The name of the task.
+        - `description` (TEXT): A description of the task.
+        - `due_date` (DATE): The due date for the task.
+        - `category_id` (INT): The category of the task, which may be NULL if not assigned.
+
+        **Table `categories`:**
+        - `id` (INT): The unique identifier for the category.
+        - `name` (VARCHAR): The name of the category.
+        - `user_id` (BIGINT(20)): Corresponds to the user who owns the category. In this case, user_id is {session['user_id']}.
+
+        **Task Data:**
+        {tasks_json}
+
+        **Examples for categorization:** 
+        1. If a task's description contains "meeting" or "client", categorize it as "Client Management".
+        2. If a task's description contains "proposal" or "complete", categorize it as "Project Work".
+        3. If a task's description contains "contract" or "follow up", categorize it as "Administration".
+
+        **Example of inserting a new category into the `categories` table if it doesn't exist:**
+        INSERT INTO categories (name, user_id) VALUES ('Client Management', {session['user_id']});
+
+        **Generate the MySQL `UPDATE` queries for tasks with NULL `category_id` values according to these rules. Ensure the `category_id` is updated in the `tasks` table using the appropriate `id` from the `categories` table for each category name.**
+        """
+
+        # Generate the response from the AI
+        try:
+            # Generate content using the AI model
+            response = model.generate_content(prompt)
+            # Extract the generated SQL query from the AI response
+            generated_query = response.text.strip()
+
+            print("Generated SQL Query:")
+            print(generated_query)
+
+            # Execute the generated SQL query
+            cursor.execute(generated_query)
+            conn.commit()
+
+            return jsonify({'success': True, 'message': 'Categories generated and updated successfully.'})
+
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            return jsonify({'success': False, 'message': 'Error generating or executing AI-based queries.'})
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 @app.route('/logout')

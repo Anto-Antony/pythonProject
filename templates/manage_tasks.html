@@ -10,25 +10,55 @@
     {% include 'header.html' %}
     <div class="manage-tasks-container">
         <h2>Manage Tasks</h2>
+
+        <!-- Form to add a new category -->
+        <div class="new-category-form">
+            <h3>Create New Category</h3>
+            <form method="POST" action="{{ url_for('create_category') }}">
+                <div class="form-group">
+                    <label for="category_name">Category Name:</label>
+                    <input type="text" id="category_name" name="category_name" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Category</button>
+        <button type="button" class="btn btn-secondary" onclick="generateCategory()">Generate Category</button>
+            </form>
+        </div>
+
+        <!-- Existing tasks table -->
+        <h3>Existing Tasks</h3>
         <table>
             <thead>
                 <tr>
                     <th>Task Name</th>
-                     <th>Description</th>
+                    <th>Description</th>
                     <th>Due Date</th>
                     <th>Due Time</th>
                     <th>Priority</th>
+                    <th>Category</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                {% for task in task %}
+                {% for task in tasks %}
                 <tr>
                     <td>{{ task.task_name }}</td>
                     <td>{{ task.description }}</td>
                     <td>{{ task.due_date }}</td>
                     <td>{{ task.due_time }}</td>
                     <td>{{ task.priority }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('update_task_category', task_id=task.id) }}">
+                            <select name="category_id" class="form-control">
+                                <option value="">Uncategorized</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}" {% if category.id == task.category_id %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-secondary">Update</button>
+                        </form>
+                    </td>
                     <td>
                         <a href="{{ url_for('edit_task', task_id=task.id) }}">Edit</a>
                         <a href="{{ url_for('delete_task', task_id=task.id) }}" onclick="return confirm('Are you sure you want to delete this task?');">Delete</a>
@@ -40,3 +70,36 @@
     </div>
 </body>
 </html>
+<script>
+  function generateCategory() {
+    console.log("Attempting to generate categories...");  // Debug statement
+    fetch('/generate_categories', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log("Received response:", response);  // Debug statement
+        if (!response.ok) {
+            // If the response status is not OK (e.g., 404, 500)
+            throw new Error('Network response was not ok: ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Received data:", data);  // Debug statement
+        if (data.success) {
+            alert('Categories generated successfully!');
+            location.reload();  // Optionally reload the page to see the updated categories
+        } else {
+            alert('Failed to generate categories: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error during category generation:', error);
+        alert('An error occurred while generating categories.');
+    });
+}
+
+</script>
