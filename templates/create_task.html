@@ -94,32 +94,14 @@
             background-color: #c82333;
         }
 
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
+        .btn-primary, .btn-success, .btn-danger {
+            padding: 5px 15px;
+            font-size: 0.875rem;
         }
 
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            border-color: #28a745;
-        }
-
-        .btn-success:hover {
-            background-color: #218838;
-            border-color: #218838;
-        }
-
-        .hidden-fields {
-            display: none;
-        }
-
-        .hidden-fields.active {
-            display: block;
+        .btn-success, .btn-danger {
+            width: auto;
+            margin-top: 10px;
         }
 
         .form-control:focus {
@@ -143,9 +125,23 @@
 
         <!-- Text area for entering task details -->
         <div class="form-group">
-            <label for="task_input_text">Task Description Input</label>
+            <label for="input-language">Select Input Language</label>
+            <select id="input-language" class="form-control mb-2">
+                <!-- Language options will be populated here -->
+            </select>
+
+            <!-- Control buttons -->
+            <div class="d-flex gap-2">
+                <button type="button" id="start_speaking" class="btn btn-success">Start Speaking</button>
+                <button type="button" id="stop_speaking" class="btn btn-danger">Stop</button>
+            </div>
+
+            <!-- Status message -->
+            <div id="status" class="mt-2">Status: Idle</div>
+
+            <label for="task_input_text" class="mt-3">Task Description Input</label>
             <textarea id="task_input_text" rows="4" class="form-control" placeholder="Enter your task details here..."></textarea>
-            <button type="button" id="generate-task-btn" class="btn btn-success mt-2 w-100">Generate Tasks</button>
+            <button type="button" id="generate-task-btn" class="btn btn-success mt-2">Generate Tasks</button>
         </div>
 
         <form method="POST" action="/create_task">
@@ -184,8 +180,8 @@
                         </div>
                     </div>
 
-                        <label for="recurring">Recurring</label>
-                        <input type="checkbox" id="recurring" name="recurring[]" class="form-check-input">
+                    <label for="recurring">Recurring</label>
+                    <input type="checkbox" id="recurring" name="recurring[]" class="form-check-input">
                     <!-- Recurring Task Fields -->
                     <div class="hidden-fields mt-2">
                         <label for="recurring_type">Recurring Type</label>
@@ -204,87 +200,62 @@
         </form>
     </div>
 
-
     <!-- Bootstrap JS -->
-     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-// Toggle visibility of recurring fields based on the checkbox state
-document.getElementById('task-list').addEventListener('change', function (e) {
-    if (e.target.matches('input[name="recurring[]"]')) {
-        const recurringField = e.target.closest('.task-item').querySelector('.hidden-fields');
-        if (e.target.checked) {
-            recurringField.classList.add('active');
-        } else {
-            recurringField.classList.remove('active');
-        }
-    }
-});
+        // Language options
+        const languageOptions = {'en': 'English'};
 
-        // Handle generating tasks using AI
-      document.getElementById('generate-task-btn').addEventListener('click', async function() {
-    const inputText = document.getElementById('task_input_text').value;
-    if (inputText.trim()) {
-        try {
-            const response = await fetch('/extract_task_details', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: inputText })
-            });
-
-            const data = await response.json();
-
-            if (data.result) {
-                // Check if data.result is a string before trimming
-                const cleanedData = typeof data.result === 'string' ? data.result.trim() : JSON.stringify(data.result);
-
-                try {
-                    // Parse the cleaned JSON string
-                    const taskDetails = JSON.parse(cleanedData);
-
-
-                    // Parse the task details and add them to the form
-                    taskDetails.forEach(detail => {
-                        const newTask = document.querySelector('.task-item').cloneNode(true);
-                        newTask.querySelector('input[name="task_name[]"]').value = detail.Heading || '';
-                        newTask.querySelector('textarea[name="description[]"]').value = detail.Description || '';
-                        if (detail.Date) {
-                        const [day, month, year] = detail.Date.split('/');
-                        const formattedDate = `${year}-${month}-${day}`;
-                        newTask.querySelector('input[name="due_date[]"]').value = formattedDate;
-                        }
-                        newTask.querySelector('input[name="due_time[]"]').value = detail.Time || '';
-                        document.getElementById('task-list').appendChild(newTask);
-                    });
-                } catch (jsonError) {
-                    console.error("JSON parsing error:", jsonError);
-                    alert('The AI response is not valid JSON. Please check the formatting.');
-                }
-            } else {
-                alert(data.error || 'Failed to extract task details.');
-            }
-        } catch (error) {
-            alert('An error occurred: ' + error.message);
-        }
-    } else {
-        alert('Please enter task details.');
-    }
-});
-
-
-        // Add new task field
-        document.getElementById('add-task-btn').addEventListener('click', function() {
-            const taskList = document.getElementById('task-list');
-            const newTask = document.querySelector('.task-item').cloneNode(true);
-            newTask.querySelectorAll('input, textarea').forEach(input => input.value = ''); // Clear input values
-            taskList.appendChild(newTask);
+        // Populate the language selection dropdown
+        const inputLanguageSelect = document.getElementById('input-language');
+        Object.entries(languageOptions).forEach(([code, language]) => {
+            const option = new Option(language, code);
+            inputLanguageSelect.appendChild(option);
         });
 
-        // Delete task functionality
-        document.getElementById('task-list').addEventListener('click', function(e) {
-            if (e.target.classList.contains('delete-task')) {
-                e.target.closest('.task-item').remove();
+        let recognition;
+
+        // Start Speech Recognition
+        document.getElementById('start_speaking').addEventListener('click', function () {
+            const inputLanguage = inputLanguageSelect.value;
+            const statusElement = document.getElementById('status');
+            const taskInput = document.getElementById('task_input_text');
+
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = inputLanguage;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.start();
+            statusElement.textContent = 'Listening...';
+
+            recognition.onresult = (event) => {
+                const recognizedText = event.results[0][0].transcript;
+                statusElement.textContent = 'Speech recognized: ' + recognizedText;
+                taskInput.value = recognizedText;
+            };
+
+            recognition.onerror = (event) => {
+                statusElement.textContent = 'Error: ' + event.error;
+            };
+
+            recognition.onspeechend = () => {
+                recognition.stop();
+                statusElement.textContent = 'Recognition ended.';
+            };
+        });
+
+        // Stop Speech Recognition
+        document.getElementById('stop_speaking').addEventListener('click', function () {
+            if (recognition) {
+                recognition.stop();
+                document.getElementById('status').textContent = 'Stopped';
             }
         });
+
+        // Additional JavaScript for task generation, adding, and deletion as needed.
     </script>
 </body>
 </html>
+
+

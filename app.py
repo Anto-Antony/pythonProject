@@ -455,12 +455,17 @@ def generate_categories():
         if not tasks:
             return jsonify({'success': False, 'message': 'No tasks with NULL categories to categorize.'})
 
-        # Convert tasks to JSON-friendly format by serializing dates to strings
+        # Convert tasks to JSON-friendly format by serializing dates and handling timedelta
         for task in tasks:
             if isinstance(task.get('due_date'), (date, datetime)):
                 task['due_date'] = task['due_date'].strftime('%Y-%m-%d')
-            if isinstance(task.get('due_time'), (date, datetime)):
-                task['due_time'] = task['due_time'].strftime('%H:%M:%S')
+            if isinstance(task.get('created_at'), datetime):
+                task['created_at'] = task['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if isinstance(task.get('due_time'), timedelta):
+                total_seconds = task['due_time'].total_seconds()
+                hours, remainder = divmod(total_seconds, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                task['due_time'] = f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
 
         # Convert tasks to JSON format
         try:
@@ -469,55 +474,113 @@ def generate_categories():
             print(f"Error converting tasks to JSON: {e}")
             return jsonify({'success': False, 'message': 'Error processing task data.'})
 
-        # Prepare the prompt for AI
         prompt = f"""
-        You are provided with a list of tasks stored in a MySQL table named `tasks` with a reference to a `categories` table. Each task may or may not have a category assigned to it. Your job is to generate SQL `UPDATE` queries that assign appropriate `category_id` values to tasks based on their descriptions. Use the following structure:
+        You are given a list of tasks stored in a MySQL table named `tasks` with a reference to a `categories` table. For each task, provide a JSON object that maps the task ID to an appropriate category based on its description, using the following structure:
+
+        **Output JSON Format:**
+        [
+          {{"task_id": 1, "category": "Client Management"}},
+          {{"task_id": 2, "category": "Project Work"}},
+          ...
+        ]
 
         **Table `tasks`:**
-        - `id` (INT): The unique identifier for the task.
-        - `task_name` (VARCHAR): The name of the task.
+        - `id` (INT): Unique identifier for the task.
+        - `task_name` (VARCHAR): Name of the task.
         - `description` (TEXT): A description of the task.
         - `due_date` (DATE): The due date for the task.
         - `category_id` (INT): The category of the task, which may be NULL if not assigned.
 
         **Table `categories`:**
-        - `id` (INT): The unique identifier for the category.
+        - `id` (INT): Unique identifier for the category.
         - `name` (VARCHAR): The name of the category.
-        - `user_id` (BIGINT(20)): Corresponds to the user who owns the category. In this case, user_id is {session['user_id']}.
+        - `user_id` (BIGINT): Corresponds to the user who owns the category (user_id is {session['user_id']}).
 
         **Task Data:**
         {tasks_json}
 
         **Examples for categorization:** 
-        1. If a task's description contains "meeting" or "client", categorize it as "Client Management".
-        2. If a task's description contains "proposal" or "complete", categorize it as "Project Work".
-        3. If a task's description contains "contract" or "follow up", categorize it as "Administration".
+        1. If a task's description contains "meeting" or "client", assign it to "Client Management".
+        2. If a task's description contains "proposal" or "complete", assign it to "Project Work".
+        3. If a task's description contains "contract" or "follow up", assign it to "Administration".
 
-        **Example of inserting a new category into the `categories` table if it doesn't exist:**
-        INSERT INTO categories (name, user_id) VALUES ('Client Management', {session['user_id']});
+        **Output format requirements:**
+        - Each item should contain a `task_id` (INT) and a `category` (STRING).
+        - Example output:
+        [
+          {{"task_id": 27, "category": "Client Management"}},
+          {{"task_id": 28, "category": "Project Work"}},
+          {{"task_id": 29, "category": "Administration"}}
+        ]
 
-        **Generate the MySQL `UPDATE` queries for tasks with NULL `category_id` values according to these rules. Ensure the `category_id` is updated in the `tasks` table using the appropriate `id` from the `categories` table for each category name.**
+        **Return the JSON object list as shown above, with no additional comments or explanations.**
         """
 
         # Generate the response from the AI
         try:
             # Generate content using the AI model
             response = model.generate_content(prompt)
-            # Extract the generated SQL query from the AI response
-            generated_query = response.text.strip()
+            # Extract the AI-generated categorization result from the response
+            generated_categories = response.text.strip()
 
-            print("Generated SQL Query:")
-            print(generated_query)
+            print("Generated Categories:")
+            print(generated_categories)
 
-            # Execute the generated SQL query
-            cursor.execute(generated_query)
+            # Clean the generated output by extracting only JSON content
+            json_start = generated_categories.find('[')
+            json_end = generated_categories.rfind(']') + 1
+            if json_start != -1 and json_end != -1:
+                clean_json = generated_categories[json_start:json_end]
+            else:
+                print("Error: Could not find JSON structure in the response.")
+                return jsonify({'success': False, 'message': 'Invalid response format from AI.'})
+
+            # Parse the cleaned JSON content
+            try:
+                category_data = json.loads(clean_json)
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON: {e}")
+                return jsonify({'success': False, 'message': 'Error decoding AI response.'})
+
+            # Update tasks with the categorized data
+            for item in category_data:
+                task_id = item.get('task_id')
+                category_name = item.get('category')
+
+                if task_id and category_name:
+                    # Fetch the category_id from the categories table based on the category name
+                    cursor.execute(
+                        'SELECT id FROM categories WHERE name = %s AND user_id = %s LIMIT 1',
+                        (category_name, session['user_id'])
+                    )
+                    result = cursor.fetchone()
+
+                    # If category exists, update the task with the category_id
+                    if result:
+                        category_id = result['id']
+                        cursor.execute(
+                            'UPDATE tasks SET category_id = %s WHERE id = %s AND user_id = %s',
+                            (category_id, task_id, session['user_id'])
+                        )
+                    else:
+                        # Insert the new category if it doesn't exist and retrieve the ID
+                        cursor.execute(
+                            'INSERT INTO categories (name, user_id) VALUES (%s, %s)',
+                            (category_name, session['user_id'])
+                        )
+                        category_id = cursor.lastrowid
+                        cursor.execute(
+                            'UPDATE tasks SET category_id = %s WHERE id = %s AND user_id = %s',
+                            (category_id, task_id, session['user_id'])
+                        )
+
+            # Commit the changes to the database
             conn.commit()
-
-            return jsonify({'success': True, 'message': 'Categories generated and updated successfully.'})
+            return jsonify({'success': True, 'message': 'Tasks categorized and updated successfully.'})
 
         except Exception as e:
-            print(f"An error occurred: {str(e)}")
-            return jsonify({'success': False, 'message': 'Error generating or executing AI-based queries.'})
+            print(f"An error occurred while processing AI response: {str(e)}")
+            return jsonify({'success': False, 'message': 'Error processing AI response.'})
 
     finally:
         cursor.close()
